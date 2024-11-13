@@ -120,3 +120,21 @@ cv2.error: OpenCV(4.6.0) :-1: error: (-5:Bad argument) in function 'cvtColor'
 > Overload resolution failed:
 >  - src is not a numpy array, neither a scalar
 >  - Expected Ptr<cv::UMat> for argument 'src'
+
+
+sol1
+
+import cv2
+from PIL import Image
+
+# Assuming you have a PIL Image object named 'pil_image'
+pil_image = Image.open('your_image.jpg')
+
+# Convert the PIL Image to a NumPy array
+open_cv_image = np.array(pil_image)
+
+# Convert RGB to BGR (OpenCV's color channel order)
+open_cv_image = open_cv_image[:, :, ::-1]
+
+# Now you can use open_cv_image with OpenCV functions
+gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
