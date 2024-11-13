@@ -17,3 +17,44 @@ $ ssh-keygen
 $ cat id_rsa.pub<br>
 > copy and upload that key in pi_ssh file
 >
+
+
+import cv2
+from picamzero import Camera
+from time import sleep
+
+# Initialize the camera using picamzero
+cam = Camera()
+cam.start_preview()
+
+# Load the pre-trained Haar Cascade classifier for face detection
+face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+# Wait for the camera to warm up
+sleep(2)
+
+# Start capturing frames from the camera
+while True:
+    # Capture a frame from the picamzero camera
+    frame = cam.capture_frame(0)  # This method grabs a frame from the PiCamera
+
+    # Convert the frame to grayscale (Haar cascades work better with grayscale images)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Detect faces in the grayscale image
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    # Draw rectangles around the detected faces
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+    # Display the resulting frame with face detection
+    cv2.imshow('Face Detection', frame)
+
+    # Break the loop if the 'q' key is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release resources and close OpenCV windows
+cam.stop_preview()
+cv2.destroyAllWindows()
