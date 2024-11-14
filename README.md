@@ -9,6 +9,8 @@ https://libcamera.org/open-projects.html
 
 https://github.com/opencv/opencv/issues/21653
 
+https://docs.opencv.org/4.x/d9/df8/tutorial_root.html
+
 ## Generate and save ssh key
 $ ssh-keygen
 > use the address in the paranthesis on terminal<br>
