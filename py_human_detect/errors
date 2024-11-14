@@ -1,0 +1,7 @@
+ERROR:too many values to unpack (expected 2)
+To fix this, look at: 
+	File: /home/aadish/R2D2/py_human_detect/try_human.py
+	Line: 14
+To see the full stack trace, type this terminal command:
+	 nano /tmp/tmpzgakubcn
+*************************************************
