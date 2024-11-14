@@ -5,3 +5,9 @@ To fix this, look at:
 To see the full stack trace, type this terminal command:
 	 nano /tmp/tmpzgakubcn
 *************************************************
+
+
+Traceback (most recent call last):
+  File "/home/aadish/R2D2/py_human_detect/try_human_newprompt.py", line 1, in <module>
+    from picamera import PiCamera
+ModuleNotFoundError: No module named 'picamera'
