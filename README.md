@@ -140,3 +140,74 @@ open_cv_image = open_cv_image[:, :, ::-1]
 
 # Now you can use open_cv_image with OpenCV functions
 gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
+
+
+New code
+
+
+from picamera import PiCamera
+import time
+import cv2
+import torch
+
+# Initialize the camera
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 30
+
+# Load the YOLOv8 model
+model = torch.hub.load('ultralytics/yolov8', 'yolov8n')
+
+# Create a stream to capture frames
+stream = PiCamera.Stream()
+camera.start_recording(stream, format='rgb')
+
+try:
+    while True:
+        frame = stream.read(640 * 480 * 3)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        # Perform human detection
+        results = model(frame)
+
+        # Visualize the results
+        cv2.imshow('YOLOv8', results.render()[0])
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+finally:
+    camera.stop_recording()
+    stream.close()
+    camera.close()
+    cv2.destroyAllWindows()
+Use code with caution.
+
+Explanation:
+
+Load the YOLOv8 Model:
+
+We load the YOLOv8 model, a state-of-the-art object detection model, using the torch.hub.load function.
+Perform Human Detection:
+
+For each frame captured from the camera stream, we pass it through the YOLOv8 model.
+The model processes the frame and returns detections, including bounding boxes and class labels.
+Visualize Results:
+
+The results.render()[0] method visualizes the detections on the frame, drawing bounding boxes around detected objects and displaying their class labels.
+The resulting image is displayed using cv2.imshow().
+Key Points:
+
+Model Selection: For real-time applications on edge devices, consider lightweight models like YOLO Nano or MobileNet.
+Performance Optimization: To improve performance, explore techniques like batch processing, model quantization, and hardware acceleration.
+Error Handling: Implement robust error handling to gracefully handle exceptions like model loading failures, inference errors, or camera connection issues.
+Ethical Considerations: Be mindful of privacy concerns and obtain necessary permissions when deploying human detection systems in public spaces.
+By following these steps and considering the specific requirements of your project, you can effectively integrate human detection capabilities into your Raspberry Pi 5 camera setup.
+
+Note:
+Remember to install the required libraries:
+
+Bash
+pip install picamera torch torchvision ultralytics
+Use code with caution.
+Gemini can make mistakes, so do
