@@ -211,3 +211,8 @@ Bash
 pip install picamera torch torchvision ultralytics
 Use code with caution.
 Gemini can make mistakes, so do
+
+
+
+
+https://www.veed.io/view/a32ca851-4c56-427d-bd88-19976c8d17ac?panel=share
