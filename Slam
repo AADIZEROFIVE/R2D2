@@ -96,4 +96,93 @@ Use matplotlib or OpenCV for visualization.
 
 
 
+
+Here is the modified code that you can copy and paste into your Python environment:
+```python
+import RPi.GPIO as GPIO
+import numpy as np
+import time
+import requests
+
+# Set up GPIO pins for ultrasonic sensor
+GPIO.setmode(GPIO.BCM)
+ULTRASONIC_TRIGGER_PIN = 18
+ULTRASONIC_ECHO_PIN = 23
+GPIO.setup(ULTRASONIC_TRIGGER_PIN, GPIO.OUT)
+GPIO.setup(ULTRASONIC_ECHO_PIN, GPIO.IN)
+
+# Set up servo motor for ultrasonic sensor
+SERVO_PIN = 17
+GPIO.setup(SERVO_PIN, GPIO.OUT)
+servo = GPIO.PWM(SERVO_PIN, 50)  # 50 Hz frequency
+servo.start(0)  # Start servo at 0 degree position
+
+# Set up map data
+map_data = np.zeros((10, 10))
+
+# Main loop
+while True:
+    # Read ultrasonic sensor data
+    servo.ChangeDutyCycle(5)  # Move servo to CENTER angle
+    time.sleep(0.5)  # Wait for 0.5 seconds
+    distance = measure_distance()
+    servo.ChangeDutyCycle(0)  # Move servo back to ZERO angle
+
+    # Update map data
+    map_data[distance//10][distance%10] = 1
+
+    # Send map data to web server
+    send_map_data(map_data)
+
+    # Wait for 0.5 seconds
+    time.sleep(0.5)
+
+def measure_distance():
+    # Send ultrasonic sensor trigger pulse
+    GPIO.output(ULTRASONIC_TRIGGER_PIN, GPIO.HIGH)
+    time.sleep(0.01)
+    GPIO.output(ULTRASONIC_TRIGGER_PIN, GPIO.LOW)
+
+    # Measure echo time
+    echo_time = 0
+    while GPIO.input(ULTRASONIC_ECHO_PIN) == GPIO.LOW:
+        echo_time += 1
+        time.sleep(0.001)
+
+    # Convert echo time to distance
+    distance = echo_time * 0.034  # Calculate distance in cm
+    return distance
+
+def send_map_data(map_data):
+    # Send map data to web server using HTTPS
+    url = "https://your-web-server.com/map-data"
+    response = requests.post(url, json={'map_data': map_data.tolist()})
+    if response.status_code != 200:
+        print("Error sending map data to web server:", response.text)
+
+# Define the web server to receive map data
+@app.route('/map-data', methods=['POST'])
+def receive_map_data():
+    global map_data
+    data = request.json['map_data']
+    map_data = np.array(data)
+    return jsonify({'message': 'Map data received'})
+
+@app.route('/map', methods=['GET'])
+def display_map():
+    global map_data
+    if map_data is None:
+        return jsonify({'message': 'No map data available'})
+    return jsonify({'map_data': map_data.tolist()})
+
+if __name__ == '__main__':
+    app.run()
+```
+Now, here are the steps to view the output on a map:
+
+1. Run the code on your Raspberry Pi by saving it to a file (e.g. `map.py`) and then running it using `python map.py`.
+2. Open a web browser and navigate to the URL `https://your-web-server.com/map`. Replace `your-web-server.com` with the hostname or IP address of your Raspberry Pi.
+3. You should see a map display on the web page. The map will be updated in real-time as the robot moves and scans its surroundings.
+4. To view the map in more detail, you can use the zoom and pan features of your web browser to zoom in and out of the map and move around.
+Note: You will need to set up a web server on your Raspberry Pi to receive the map data and serve it to clients. You can use a web framework like Flask or Django to create a simple web server.
 Let me know if you'd like a more detailed explanation for any part!
