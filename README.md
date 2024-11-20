@@ -1,4 +1,7 @@
 # R2D2
+
+![image](https://github.com/user-attachments/assets/85967814-73cb-4b1b-a0b1-1590b739047a)
+
 https://www.raspberrypi.com/documentation/computers/remote-access.html
 
 https://youtu.be/w6OsICbnJbA?si=lr2aQkIp4HFyw6tm
