@@ -1,54 +1,5 @@
-The "Permission denied (publickey)" error usually happens when the SSH server on the Raspberry Pi is configured to only accept specific authentication methods, and password authentication might be disabled.
+sudo apt install libpolkit-gobject-1-0:armhf libraspberrypi0:armhf libraspberrypi-dev:armhf libraspberrypi-bin:armhf libgles-dev:armhf libegl-dev:armh
 
-Here are a few steps to troubleshoot and resolve this:
+sudo ln -s /usr/lib/arm-linux-gnueabihf/libGLESv2.so /usr/lib/libbrcmGLESv2.so
 
-1. **Verify SSH Access**  
-   Try manually logging into the Raspberry Pi with the command:
-   ```bash
-   ssh aadish@192.168.70.63
-   ```
-   If it prompts for a password, SSH access should be available, and we can proceed with `ssh-copy-id`. If you still get a "Permission denied" error, make sure:
-   - The `sshd` server on the Raspberry Pi is configured to allow password-based authentication.
-   - You’re using the correct username (`aadish`) and IP address.
-
-2. **Check SSH Configuration on Raspberry Pi**  
-   If you have another way to access the Raspberry Pi (such as connecting a monitor and keyboard directly):
-   - Open the SSH configuration file on the Pi:
-     ```bash
-     sudo nano /etc/ssh/sshd_config
-     ```
-   - Make sure these settings are configured as follows:
-     ```plaintext
-     PubkeyAuthentication yes
-     PasswordAuthentication yes
-     ```
-   - Save the changes, then restart the SSH service:
-     ```bash
-     sudo systemctl restart ssh
-     ```
-
-3. **Manually Copy the Key**  
-   If `ssh-copy-id` still doesn’t work, you can manually copy the public key:
-   - Copy your public key to the clipboard:
-     ```bash
-     cat ~/.ssh/id_rsa.pub
-     ```
-   - On the Raspberry Pi, open (or create) the `~/.ssh/authorized_keys` file:
-     ```bash
-     nano ~/.ssh/authorized_keys
-     ```
-   - Paste the key into this file, save, and close. Make sure the permissions on the `~/.ssh` folder and `authorized_keys` file are correct:
-     ```bash
-     chmod 700 ~/.ssh
-     chmod 600 ~/.ssh/authorized_keys
-     ```
-
-After trying these steps, you should be able to connect using SSH with your key.
-
-
-
-
-
-AADISH
-
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCJSkviscq1e0B6e96dzcIjqiqR8gTd2uHwGEZAPmYOPqom3KaWX3p/tTFTsGRfLTEpP57goTVpo2UnKvwpp7s2JaMoN5/QipqR9AiPuHFLE396WwOsQnQR7taoBlw6/qBs2djZ/6Ffi6nbHXlsKj6LH1s7UIV+VsoUbVDahAhGadTH3I656KSJjuzfWDL2h8JnXvLR6S6zZHgTjqorRci4CInYm+mWctWt9ofdqfiGu2234+fmsagYWvzrOm45BYaMjDvckPS7ZREcCt1z88c7LuzSz6VehzNpUYR2uPsUidiznTNwC5dD/N+8yUiR44URKPg98kSc18DvUqEd5FhJYPoVoyFHnjAh0XM5Se8vpV7FA+UTsV5di07gJH07peY6kbqTWxHvGNAvNL6fEqIXLA30ME/gsQ92Gumbudedqlbjy5qBQN21QVPB6vTFmYrAaSV3ft7cnjAyCmMhkLaIIRuGUyLZ6RdRnfqtNxM1uqnVgl9HNZJe/lsRvVpeF+0= aadish@AADISH-DESKTOP
+sudo ln -s /usr/lib/arm-linux-gnueabihf/libEGL.so /usr/lib/libbrcmEGL.so
