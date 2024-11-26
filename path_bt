@@ -180,3 +180,133 @@ if __name__ == "__main__":
         elif choice == "3":
             print("Exiting...")
 
+
+
+
+If you prefer not to use the NewPing library, we can manually handle the ultrasonic sensor's trigger and echo signals with basic Arduino functions. Here's how the code looks when replacing NewPing with direct control:
+
+
+---
+
+Updated ESP32 Code Without NewPing
+
+#include "BluetoothSerial.h"
+
+#define TRIG_PIN 12
+#define ECHO_PIN 14
+#define MOTOR_LEFT 5
+#define MOTOR_RIGHT 4
+
+BluetoothSerial SerialBT;
+
+void setup() {
+  Serial.begin(115200);       // Debugging on serial monitor
+  SerialBT.begin("ESP32Car"); // Bluetooth device name
+  Serial.println("Bluetooth initialized. Ready to pair!");
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(MOTOR_LEFT, OUTPUT);
+  pinMode(MOTOR_RIGHT, OUTPUT);
+}
+
+void loop() {
+  static String command = "";
+
+  // Check for incoming Bluetooth commands
+  if (SerialBT.available()) {
+    char c = SerialBT.read();
+    if (c == '\n') {
+      executeCommand(command);
+      command = "";
+    } else {
+      command += c;
+    }
+  }
+
+  // Obstacle avoidance logic
+  int distance = getDistance();
+  if (distance > 0 && distance < 20) {
+    stopMotors();
+    SerialBT.println("stop");
+  } else {
+    moveForward();
+    SerialBT.println("forward");
+  }
+
+  delay(100);
+}
+
+void executeCommand(String cmd) {
+  if (cmd == "forward") {
+    moveForward();
+  } else if (cmd == "left") {
+    turnLeft();
+  } else if (cmd == "right") {
+    turnRight();
+  } else if (cmd == "stop") {
+    stopMotors();
+  }
+}
+
+void moveForward() {
+  digitalWrite(MOTOR_LEFT, HIGH);
+  digitalWrite(MOTOR_RIGHT, LOW);
+}
+
+void turnLeft() {
+  digitalWrite(MOTOR_LEFT, LOW);
+  digitalWrite(MOTOR_RIGHT, HIGH);
+}
+
+void turnRight() {
+  digitalWrite(MOTOR_LEFT, HIGH);
+  digitalWrite(MOTOR_RIGHT, HIGH);
+}
+
+void stopMotors() {
+  digitalWrite(MOTOR_LEFT, LOW);
+  digitalWrite(MOTOR_RIGHT, LOW);
+}
+
+int getDistance() {
+  // Send a 10µs pulse to the TRIG pin
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // Measure the duration of the pulse on the ECHO pin
+  long duration = pulseIn(ECHO_PIN, HIGH);
+
+  // Convert the duration to distance in centimeters
+  int distance = duration * 0.034 / 2; // Speed of sound: 0.034 cm/µs
+  return distance;
+}
+
+
+---
+
+Key Changes
+
+1. Ultrasonic Sensor Handling:
+
+A manual implementation using digitalWrite to send a trigger pulse and pulseIn to measure the echo pulse width.
+
+The formula distance = duration * 0.034 / 2 converts the echo duration to distance in centimeters.
+
+
+
+2. Bluetooth Communication and Motors:
+
+Functionality remains the same, with Bluetooth commands controlling the motors and sending feedback to the Raspberry Pi.
+
+
+
+
+
+---
+
+Let me know if you need further modifications or help with testing!
+
