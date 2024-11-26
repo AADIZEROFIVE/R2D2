@@ -1,0 +1,182 @@
+Using Bluetooth for communication between the ESP32 and the Raspberry Pi can simplify the project by avoiding physical serial connections. Here's an updated implementation integrating the provided Bluetooth code with path memorizing and tracing functionality.
+
+
+---
+
+ESP32 Code
+
+This code handles Bluetooth communication, obstacle avoidance, and command execution. It sends movement actions to the Raspberry Pi via Bluetooth and receives commands for replaying the path.
+
+#include "BluetoothSerial.h"
+#include <NewPing.h>
+
+#define TRIG_PIN 12
+#define ECHO_PIN 14
+#define MAX_DISTANCE 200
+#define MOTOR_LEFT 5
+#define MOTOR_RIGHT 4
+
+BluetoothSerial SerialBT;
+
+NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
+
+void setup() {
+  Serial.begin(115200);       // Debugging on serial monitor
+  SerialBT.begin("ESP32Car"); // Bluetooth device name
+  Serial.println("Bluetooth initialized. Ready to pair!");
+
+  pinMode(MOTOR_LEFT, OUTPUT);
+  pinMode(MOTOR_RIGHT, OUTPUT);
+}
+
+void loop() {
+  static String command = "";
+
+  // Check for incoming Bluetooth commands
+  if (SerialBT.available()) {
+    char c = SerialBT.read();
+    if (c == '\n') {
+      executeCommand(command);
+      command = "";
+    } else {
+      command += c;
+    }
+  }
+
+  // Obstacle avoidance logic
+  int distance = sonar.ping_cm();
+  if (distance > 0 && distance < 20) {
+    stopMotors();
+    SerialBT.println("stop");
+  } else {
+    moveForward();
+    SerialBT.println("forward");
+  }
+
+  delay(100);
+}
+
+void executeCommand(String cmd) {
+  if (cmd == "forward") {
+    moveForward();
+  } else if (cmd == "left") {
+    turnLeft();
+  } else if (cmd == "right") {
+    turnRight();
+  } else if (cmd == "stop") {
+    stopMotors();
+  }
+}
+
+void moveForward() {
+  digitalWrite(MOTOR_LEFT, HIGH);
+  digitalWrite(MOTOR_RIGHT, LOW);
+}
+
+void turnLeft() {
+  digitalWrite(MOTOR_LEFT, LOW);
+  digitalWrite(MOTOR_RIGHT, HIGH);
+}
+
+void turnRight() {
+  digitalWrite(MOTOR_LEFT, HIGH);
+  digitalWrite(MOTOR_RIGHT, HIGH);
+}
+
+void stopMotors() {
+  digitalWrite(MOTOR_LEFT, LOW);
+  digitalWrite(MOTOR_RIGHT, LOW);
+}
+
+
+---
+
+Raspberry Pi Code
+
+This Python script handles Bluetooth communication, path recording, and path tracing.
+
+Updated Path Memorizing and Tracing Script
+
+from bluetooth import BluetoothSocket, find_service, RFCOMM
+import time
+
+# Bluetooth connection details
+addr = "08:A6:F7:69:DA:8A"  # Replace with your ESP32's MAC address
+buf_size = 1024
+
+# Discover services and connect to ESP32
+service_matches = find_service(address=addr)
+
+if len(service_matches) == 0:
+    print("No Bluetooth services found. Exiting.")
+    exit(1)
+
+first_match = service_matches[0]
+port = first_match["port"]
+name = first_match["name"]
+host = first_match["host"]
+
+print(f"Connecting to \"{name}\" on {host}, port {port}...")
+sock = BluetoothSocket(RFCOMM)
+sock.connect((host, port))
+print("Bluetooth connection established!")
+
+# Path data storage
+path_data = []
+
+def record_path():
+    """
+    Record the car's path while performing obstacle avoidance.
+    """
+    global path_data
+    print("Recording path. Press Ctrl+C to stop.")
+    try:
+        while True:
+            data = sock.recv(buf_size).decode().strip()
+            print(f"Action: {data}")
+            path_data.append(data)
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("Path recording stopped.")
+        save_path()
+
+def save_path():
+    """
+    Save the recorded path to a file.
+    """
+    with open("path_data.txt", "w") as f:
+        for entry in path_data:
+            f.write(f"{entry}\n")
+    print("Path saved to 'path_data.txt'.")
+
+def trace_path():
+    """
+    Replay the recorded path.
+    """
+    try:
+        with open("path_data.txt", "r") as f:
+            print("Tracing path...")
+            for command in f:
+                sock.send(command.strip().encode())
+                sock.send("\n".encode())
+                print(f"Sent command: {command.strip()}")
+                time.sleep(0.5)  # Adjust delay based on action duration
+        print("Path tracing completed.")
+    except FileNotFoundError:
+        print("No path data found. Please record a path first.")
+
+# Main program menu
+if __name__ == "__main__":
+    while True:
+        print("\n1. Record Path")
+        print("2. Trace Path")
+        print("3. Exit")
+        choice = input("Select an option: ")
+
+        if choice == "1":
+            record_path()
+        elif choice == "2":
+            trace_path()
+        elif choice == "3":
+            print("Exiting...")
+
