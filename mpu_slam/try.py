@@ -51,4 +51,4 @@ def plot_map():
     plt.show()
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.15', port=5000)
+    app.run(host='0.0.0.0', port=5000)
