@@ -1,0 +1,185 @@
+Yes, you're absolutely correct! If you want to capture 180-degree readings using the ultrasonic sensor, you would need to mount it on a **servo motor** to allow it to rotate. This way, the ultrasonic sensor can take multiple readings across a 180-degree field of view, enabling the mapping of obstacles and floor layout.
+
+### Steps for Integrating Ultrasonic Sensor with Servo for 180° Scanning:
+
+1. **Servo Motor for Rotation**: Use a servo motor to rotate the ultrasonic sensor in increments (e.g., every 10 degrees). The servo motor allows the sensor to sweep across 180 degrees, capturing distance measurements at each position.
+
+2. **Sensor Data Capture**: At each servo angle, the ultrasonic sensor measures the distance to an obstacle. The servo then rotates to the next angle, and this process continues until the full 180-degree range is scanned.
+
+3. **Data Collection**: You can collect the distance data at each angle, and with the servo angle information, you can map the distances in polar coordinates (distance vs. angle) to later convert it into Cartesian coordinates for building a map.
+
+### Modified ESP32 Code with Servo
+
+Here is how you can modify the ESP32 code to control the servo motor and the ultrasonic sensor for 180-degree scanning.
+
+#### Required Libraries:
+- `Servo.h`: To control the servo motor.
+- `Ultrasonic.h`: For the ultrasonic sensor.
+
+```cpp
+#include <Wire.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Ultrasonic.h>
+#include <Servo.h>
+
+// WiFi setup
+const char* ssid = "your_wifi_ssid";
+const char* password = "your_wifi_password";
+
+// Ultrasonic sensor setup
+Ultrasonic ultrasonic(12, 13);  // Trigger pin, Echo pin
+
+// Servo setup
+Servo myservo;
+int servoPin = 14;  // PWM pin to control the servo
+
+// MPU setup
+Adafruit_MPU6050 mpu;
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Initialize the MPU
+  if (!mpu.begin()) {
+    Serial.println("Could not find a valid MPU6050 sensor");
+    while (1);
+  }
+
+  // Initialize servo
+  myservo.attach(servoPin);
+  myservo.write(0);  // Set initial position
+
+  // Initialize sensor values
+  ultrasonic.setTimeout(4000);
+}
+
+void loop() {
+  // Read MPU data (orientation)
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  
+  float roll = atan2(a.acceleration.y, a.acceleration.z) * 180.0 / PI;
+  float pitch = atan2(-a.acceleration.x, sqrt(a.acceleration.y * a.acceleration.y + a.acceleration.z * a.acceleration.z)) * 180.0 / PI;
+
+  // Start the 180-degree scanning with the ultrasonic sensor
+  for (int angle = 0; angle <= 180; angle += 10) {  // Sweep in 10-degree increments
+    myservo.write(angle);  // Move the servo to the current angle
+    delay(500);  // Wait for the servo to move and stabilize
+
+    // Read ultrasonic sensor data
+    long distance = ultrasonic.read();
+
+    // Send the sensor data to Python server
+    String jsonData = "{\"angle\": " + String(angle) + ", \"distance\": " + String(distance) + ", \"roll\": " + String(roll) + ", \"pitch\": " + String(pitch) + "}";
+    sendDataToPython(jsonData);
+  }
+  
+  delay(1000);  // Delay before next scan
+}
+
+void sendDataToPython(String jsonData) {
+  HTTPClient http;
+  http.begin("http://your_computer_ip:port/receive");  // Change this to your computer's IP and endpoint
+  http.addHeader("Content-Type", "application/json");
+  int httpCode = http.POST(jsonData);
+  if (httpCode > 0) {
+    Serial.println("Data sent successfully");
+  } else {
+    Serial.println("Error in sending data");
+  }
+  http.end();
+}
+```
+
+### Key Updates:
+- **Servo Control**: The `Servo` library is used to control the servo motor that moves the ultrasonic sensor. The servo is moved in increments (e.g., 10 degrees) from 0 to 180 degrees.
+- **Distance Readings**: The ultrasonic sensor measures the distance at each angle, and this data is sent to the Python server.
+- **Orientation Data**: The MPU (IMU) continues to provide roll and pitch data, which can be used for orientation purposes.
+
+### Python Code for Handling the Data
+
+The Python code should handle the incoming data, store it, and later process it for creating the floor map.
+
+```python
+from flask import Flask, request, jsonify
+import json
+import matplotlib.pyplot as plt
+import numpy as np
+
+app = Flask(__name__)
+
+# Initialize map storage
+robot_positions = []
+
+# Flask route to receive data from ESP32
+@app.route('/receive', methods=['POST'])
+def receive_data():
+    data = request.get_json()
+    angle = data['angle']
+    distance = data['distance']
+    roll = data['roll']
+    pitch = data['pitch']
+    
+    # Convert polar coordinates (angle, distance) to Cartesian coordinates (x, y)
+    x, y = polar_to_cartesian(angle, distance)
+    
+    # Store robot position and angle
+    robot_positions.append((x, y, angle, distance))
+    
+    # Save the data (map) after receiving each update
+    save_map(robot_positions)
+    
+    return jsonify({"status": "success"})
+
+def polar_to_cartesian(angle, distance):
+    """ Convert polar coordinates (angle, distance) to Cartesian coordinates (x, y). """
+    # Convert angle to radians
+    angle_rad = np.radians(angle)
+    x = distance * np.cos(angle_rad)
+    y = distance * np.sin(angle_rad)
+    return x, y
+
+def save_map(robot_positions):
+    # Save map as JSON file
+    with open("map.json", "w") as f:
+        json.dump(robot_positions, f)
+
+def plot_map():
+    # Visualize the map
+    x_vals, y_vals = zip(*[(pos[0], pos[1]) for pos in robot_positions])
+    plt.scatter(x_vals, y_vals)
+    plt.title("Floor Map")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.show()
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+```
+
+### Explanation of Python Code:
+- **`polar_to_cartesian`**: Converts the polar coordinates (distance and angle) to Cartesian coordinates (x, y).
+- **Mapping**: The received data (distance at various angles) is stored as a list of `(x, y)` coordinates.
+- **Plotting**: The `plot_map` function visualizes the mapped points using `matplotlib`.
+
+### 4. **Using the Map for Navigation**
+Once the map is created, you can:
+- Store the data (in `map.json`).
+- Use the map to navigate to any given point by calculating the shortest path (using algorithms like A* or Dijkstra).
+- You can also implement a simple command system to tell the robot to move to specific points on the map.
+
+### Next Steps:
+- **Optimization**: Use smaller increments in servo angle for more accurate mapping (e.g., 5 degrees instead of 10).
+- **Pathfinding**: Integrate a pathfinding algorithm to navigate the robot to a target location on the map.
+- **Obstacle Detection**: Identify obstacles in the mapped space and avoid them during navigation.
