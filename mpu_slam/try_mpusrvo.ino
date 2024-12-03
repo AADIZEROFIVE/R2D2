@@ -21,6 +21,7 @@ int servoPin = 14;  // PWM pin to control the servo
 Adafruit_MPU6050 mpu;
 
 void setup() {
+  Wire.begin(21, 22);
   Serial.begin(115200);
   
   // Connect to Wi-Fi
